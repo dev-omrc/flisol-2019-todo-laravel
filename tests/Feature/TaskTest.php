@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Task;
 use App\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-// use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Artisan;
 use Laravel\Passport\Passport;
 use Tests\TestCase;
@@ -13,7 +12,6 @@ use Tests\TestCase;
 class TaskTest extends TestCase
 {
     use RefreshDatabase;
-    // use WithFaker;
 
     /**
     * @test
@@ -24,7 +22,6 @@ class TaskTest extends TestCase
 
         $task = [
             'name' => 'Testing task',
-            'description' => 'Create a testing task'
         ];
         $this->actingAs($this->createUser())->post(route('task.store', $task))
              ->assertStatus(201)
@@ -47,7 +44,6 @@ class TaskTest extends TestCase
 
         $data = [
             'name' => 'Updated task',
-            'description' => 'Testing if can update a task'
         ];
 
         $this->put(route('task.update', $task), $data)
@@ -56,6 +52,16 @@ class TaskTest extends TestCase
                  'message' => 'Task updated successfully!'
              ]);
 
+        $data = [
+            'completed' => true
+        ];
+        $this->put(route('task.update', $task), $data)
+        ->assertOk()
+        ->assertJson([
+            'message' => 'Task updated successfully!'
+        ]);
+
+        $task->completed = true;
         $this->assertDatabaseMissing('tasks', $task->toArray());
         $this->assertDatabaseHas('tasks', $data);
     }
@@ -75,7 +81,8 @@ class TaskTest extends TestCase
             'task' => [
                 'id' => $task->id,
                 'name' => $task->name,
-                'description' => $task->description
+                'completed' => $task->completed ? 1 : 0,
+                'created_at' => $task->created_at->diffForHumans()
             ]
         ]);
     }
@@ -88,13 +95,15 @@ class TaskTest extends TestCase
         $user = $this->createUser();
         Passport::actingAs($user, ['view-tasks']);
 
-        $tasks = $this->createTask(['user_id' => $user->id], 10);
+        $this->createTask(['user_id' => $user->id], 2);
 
+        $tasks = $user->tasks;
         $tasks = $tasks->map(function ($task) {
             return [
                 'id' => $task->id,
                 'name' => $task->name,
-                'description' => $task->description
+                'completed' => $task->completed ? 1 : 0,
+                'created_at' => $task->created_at->diffForHumans()
             ];
         });
 

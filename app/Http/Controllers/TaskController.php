@@ -18,7 +18,8 @@ class TaskController extends Controller
             return [
                 'id' => $task->id,
                 'name' => $task->name,
-                'description' => $task->description
+                'completed' => $task->completed,
+                'created_at' => $task->created_at->diffForHumans()
             ];
         });
 
@@ -37,12 +38,10 @@ class TaskController extends Controller
     {
         $request->validate([
             'name' => 'required|min:3',
-            'description' => 'required'
         ]);
 
         $task = new Task;
         $task->name = $request->name;
-        $task->description = $request->description;
 
         auth()->user()->tasks()->save($task);
 
@@ -54,7 +53,7 @@ class TaskController extends Controller
     /**
      * Display the specified resource.
      *
-     * @param  int  $id
+     * @param  \App\Task $task
      * @return \Illuminate\Http\Response
      */
     public function show(Task $task)
@@ -63,7 +62,8 @@ class TaskController extends Controller
             'task' => [
                 'id' => $task->id,
                 'name' => $task->name,
-                'description' => $task->description
+                'completed' => $task->completed,
+                'created_at' => $task->created_at->diffForHumans()
             ]
         ], 200);
     }
@@ -72,18 +72,24 @@ class TaskController extends Controller
      * Update the specified resource in storage.
      *
      * @param  \Illuminate\Http\Request  $request
-     * @param  int  $id
+     * @param  \App\Task $task
      * @return \Illuminate\Http\Response
      */
     public function update(Request $request, Task $task)
     {
         $request->validate([
-            'name' => 'required|min:3',
-            'description' => 'required'
+            'name' => 'required_without:completed|min:3',
+            'completed' => 'required_without:name|boolean'
         ]);
 
-        $task->name = $request->name;
-        $task->description = $request->description;
+        if ($request->name) {
+            $task->name = $request->name;
+        }
+
+        if (isset($request->completed)) {
+            $task->completed = $request->completed;
+        }
+
         $task->save();
 
         return response()->json([
@@ -94,7 +100,7 @@ class TaskController extends Controller
     /**
      * Remove the specified resource from storage.
      *
-     * @param  int  $id
+     * @param  \App\Task $task
      * @return \Illuminate\Http\Response
      */
     public function destroy(Task $task)
